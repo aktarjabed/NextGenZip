@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("kotlin-parcelize")
+    id("com.google.protobuf")
 }
 
 android {
@@ -55,6 +56,31 @@ android {
             version = "3.22.1"
         }
     }
+    sourceSets {
+        getByName("main") {
+            proto {
+                srcDir("src/main/proto")
+            }
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.25.3"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                getByName("java") {
+                    option("lite")
+                }
+                getByName("kotlin") {
+                    option("lite")
+                }
+            }
+        }
+    }
 }
 
 dependencies {
@@ -83,6 +109,10 @@ dependencies {
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.datastore:datastore-core:1.1.1")
+    implementation("androidx.datastore:datastore-datastore:1.1.1")
+    implementation("com.google.protobuf:protobuf-javalite:3.25.3")
+    implementation("com.google.protobuf:protobuf-kotlin-lite:3.25.3")
+
 
     // Kotlin coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")

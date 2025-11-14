@@ -1,31 +1,39 @@
 package com.aktarjabed.nextgenzip.workers
 
+import android.app.Notification
 import android.content.Context
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.aktarjabed.nextgenzip.data.ArchiveEngine
 import com.aktarjabed.nextgenzip.data.model.ArchiveOperation
-import kotlinx.serialization.json.Json
-import android.net.Uri
 import com.aktarjabed.nextgenzip.data.model.OperationType
+import com.aktarjabed.nextgenzip.notifications.NotificationHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.util.*
 
 class ArchiveWorker(
     appContext: Context,
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
 
-    override suspend fun doWork(): Result {
-        return try {
-            val operationJson = inputData.getString(KEY_OPERATION)
-                ?: return Result.failure()
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val operationJson = inputData.getString(KEY_OPERATION)
+            ?: return@withContext Result.failure()
 
-            // Note: Direct serialization of Uri is not recommended for production.
-            // A more robust solution would convert Uris to strings and back.
-            val operation = Json.decodeFromString<ArchiveOperation>(operationJson)
+        // Proper serialization would be needed here for production
+        val operation = Json.decodeFromString<ArchiveOperation>(operationJson)
+        val notificationId = id.hashCode()
+
+        try {
+            setForeground(createForegroundInfo(0, "Starting..."))
 
             when (operation.type) {
                 OperationType.CREATE -> {
+                    // Create logic would need progress updates to leverage this
                     ArchiveEngine.createZipWithSplitAndAes(
                         context = applicationContext,
                         uris = operation.inputUris,
@@ -41,20 +49,33 @@ class ArchiveWorker(
                         outDirPath = operation.outputPath,
                         password = operation.password
                     ) { progress ->
-                        // This requires a more complex setup to pass progress back to UI
-                        // For now, we rely on the foreground service notification for progress
+                        if (isStopped) return@extractArchive // Cancellation check
+
+                        val progressPercent = (progress * 100).toInt()
                         setProgress(workDataOf(KEY_PROGRESS to progress))
+                        setForegroundAsync(createForegroundInfo(progressPercent, "Extracting..."))
                     }
                 }
-                else -> {
-                    // Handle other types or return failure
-                    return Result.failure()
-                }
+                else -> return@withContext Result.failure()
             }
             Result.success()
         } catch (e: Exception) {
-            Result.failure()
+            if (isStopped) {
+                Result.failure()
+            } else {
+                Result.failure()
+            }
         }
+    }
+
+    private fun createForegroundInfo(progress: Int, message: String): ForegroundInfo {
+        val notification = NotificationHelper.createProgressNotification(
+            applicationContext,
+            "Archive Operation",
+            message,
+            progress
+        )
+        return ForegroundInfo(id.hashCode(), notification)
     }
 
     companion object {

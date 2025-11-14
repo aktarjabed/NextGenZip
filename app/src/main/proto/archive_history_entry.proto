@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_package = "com.aktarjabed.nextgenzip.data.models";
+option java_multiple_files = true;
+
+message ArchiveHistoryEntry {
+    int64 id = 1;
+    string operation = 2;  // e.g., "compress", "extract", "repair"
+    string archivePath = 3;
+    int64 timestamp = 4;   // epoch millis
+    bool success = 5;
+    string notes = 6;
+}
+
+message ArchiveHistoryEntryList {
+    repeated ArchiveHistoryEntry entries = 1;
+}

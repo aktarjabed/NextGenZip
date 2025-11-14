@@ -1,25 +1,22 @@
 package com.aktarjabed.nextgenzip.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.aktarjabed.nextgenzip.ui.ArchiveScreen
-import com.aktarjabed.nextgenzip.ui.ExtractScreen
-import com.aktarjabed.nextgenzip.ui.HomeScreen
-import com.aktarjabed.nextgenzip.ui.SettingsScreen
+import com.aktarjabed.nextgenzip.ui.*
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")
     object Archive : Screen("archive")
     object Extract : Screen("extract")
     object Settings : Screen("settings")
+    object History : Screen("history")
+    object Favorites : Screen("favorites")
 }
 
 @Composable
-fun NavGraph() {
-    val navController = rememberNavController()
-
+fun NavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route
@@ -31,23 +28,20 @@ fun NavGraph() {
                 onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
             )
         }
-
         composable(Screen.Archive.route) {
-            ArchiveScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            ArchiveScreen(onNavigateBack = { navController.popBackStack() })
         }
-
         composable(Screen.Extract.route) {
-            ExtractScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            ExtractScreen(onNavigateBack = { navController.popBackStack() })
         }
-
         composable(Screen.Settings.route) {
-            SettingsScreen(
-                onNavigateBack = { navController.popBackStack() }
-            )
+            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(Screen.History.route) {
+            HistoryScreen()
+        }
+        composable(Screen.Favorites.route) {
+            FavoritesScreen()
         }
     }
 }

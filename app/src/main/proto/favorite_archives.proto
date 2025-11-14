@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+option java_package = "com.aktarjabed.nextgenzip.data.models";
+option java_multiple_files = true;
+
+message FavoriteArchives {
+    repeated string paths = 1;
+}
