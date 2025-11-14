@@ -4,13 +4,11 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aktarjabed.nextgenzip.ai.LlamaAIManager
 import com.aktarjabed.nextgenzip.data.ArchiveEngine
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.io.File
 
 data class ArchiveUiState(
     val selectedFiles: List<Uri> = emptyList(),
@@ -20,7 +18,8 @@ data class ArchiveUiState(
     val progress: Float = 0f,
     val statusMessage: String = "",
     val resultMessage: String? = null,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val aiResponse: String = ""
 )
 
 class ArchiveViewModel : ViewModel() {
@@ -29,15 +28,11 @@ class ArchiveViewModel : ViewModel() {
     val uiState: StateFlow<ArchiveUiState> = _uiState.asStateFlow()
 
     fun addFiles(uris: List<Uri>) {
-        _uiState.value = _uiState.value.copy(
-            selectedFiles = _uiState.value.selectedFiles + uris
-        )
+        _uiState.value = _uiState.value.copy(selectedFiles = _uiState.value.selectedFiles + uris)
     }
 
     fun removeFile(uri: Uri) {
-        _uiState.value = _uiState.value.copy(
-            selectedFiles = _uiState.value.selectedFiles.filter { it != uri }
-        )
+        _uiState.value = _uiState.value.copy(selectedFiles = _uiState.value.selectedFiles - uri)
     }
 
     fun setPassword(password: String?) {
@@ -51,83 +46,35 @@ class ArchiveViewModel : ViewModel() {
     fun createArchive(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = true,
-                    progress = 0f,
-                    statusMessage = "Creating archive..."
-                )
+                _uiState.value = _uiState.value.copy(isProcessing = true, progress = 0f, statusMessage = "Creating archive...")
 
-                val outputPath = "${context.cacheDir.absolutePath}/archive_${System.currentTimeMillis()}.zip"
+                val outPath = "${context.cacheDir.absolutePath}/archive_${System.currentTimeMillis()}.zip"
 
                 ArchiveEngine.createZipWithSplitAndAes(
-                    context = context,
-                    uris = _uiState.value.selectedFiles,
-                    outZipPath = outputPath,
-                    password = _uiState.value.password,
-                    splitSizeInBytes = _uiState.value.splitSizeBytes
+                    context,
+                    _uiState.value.selectedFiles,
+                    outPath,
+                    _uiState.value.password,
+                    _uiState.value.splitSizeBytes
                 )
 
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    progress = 1f,
-                    resultMessage = "Archive created successfully at:\n$outputPath",
-                    isSuccess = true,
-                    selectedFiles = emptyList()
-                )
+                _uiState.value = _uiState.value.copy(isProcessing = false, progress = 1f, resultMessage = "Archive created at:\n$outPath", isSuccess = true, selectedFiles = emptyList())
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    resultMessage = "Error: ${e.localizedMessage}",
-                    isSuccess = false
-                )
+                _uiState.value = _uiState.value.copy(isProcessing = false, resultMessage = "Error: ${e.localizedMessage}", isSuccess = false)
             }
         }
     }
 
-    fun extractArchive(context: Context, archiveUri: Uri) {
+    fun analyzeWithAI(modelPath: String?, prompt: String, maxTokens: Int = 128) {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = true,
-                    progress = 0f,
-                    statusMessage = "Extracting..."
-                )
-
-                val outputDir = "${context.cacheDir.absolutePath}/extracted_${System.currentTimeMillis()}"
-                File(outputDir).mkdirs()
-
-                ArchiveEngine.extractArchive(
-                    context = context,
-                    archiveUri = archiveUri,
-                    outDirPath = outputDir,
-                    password = _uiState.value.password
-                ) { progress ->
-                    _uiState.value = _uiState.value.copy(
-                        progress = progress,
-                        statusMessage = "Extracting... ${(progress * 100).toInt()}%"
-                    )
+            LlamaAIManager.respond(modelPath ?: "", prompt, maxTokens)
+                .collect { chunk ->
+                    _uiState.update { it.copy(aiResponse = it.aiResponse + chunk) }
                 }
-
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    progress = 1f,
-                    resultMessage = "Archive extracted successfully to:\n$outputDir",
-                    isSuccess = true
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isProcessing = false,
-                    resultMessage = "Error: ${e.localizedMessage}",
-                    isSuccess = false
-                )
-            }
         }
     }
 
     fun clearResult() {
-        _uiState.value = _uiState.value.copy(
-            resultMessage = null,
-            isSuccess = false
-        )
+        _uiState.value = _uiState.value.copy(resultMessage = null, isSuccess = false, aiResponse = "")
     }
 }

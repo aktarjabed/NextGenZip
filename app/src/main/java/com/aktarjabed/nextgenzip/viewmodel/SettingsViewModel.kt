@@ -1,35 +1,52 @@
 package com.aktarjabed.nextgenzip.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.aktarjabed.nextgenzip.data.DataStoreManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
-data class SettingsUiState(
-    val compressionLevel: Int = 5,
-    val rememberPasswords: Boolean = false,
-    val useEncryptionByDefault: Boolean = false
-)
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
-class SettingsViewModel : ViewModel() {
+    private val _compressionLevel = MutableStateFlow(5)
+    val compressionLevel: StateFlow<Int> = _compressionLevel
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val _splitSize = MutableStateFlow(0L)
+    val splitSize: StateFlow<Long> = _splitSize
+
+    private val _password = MutableStateFlow<String?>(null)
+    val password: StateFlow<String?> = _password
+
+    init {
+        viewModelScope.launch {
+            val ctx = getApplication<Application>()
+            _compressionLevel.value = DataStoreManager.getCompressionLevel(ctx).first()
+            _splitSize.value = DataStoreManager.getSplitSize(ctx).first()
+            _password.value = DataStoreManager.getPassword(ctx).first()
+        }
+    }
 
     fun setCompressionLevel(level: Int) {
-        _uiState.value = _uiState.value.copy(compressionLevel = level)
+        _compressionLevel.value = level
+        viewModelScope.launch {
+            DataStoreManager.setCompressionLevel(getApplication(), level)
+        }
     }
 
-    fun setRememberPasswords(remember: Boolean) {
-        _uiState.value = _uiState.value.copy(rememberPasswords = remember)
+    fun setSplitSize(size: Long) {
+        _splitSize.value = size
+        viewModelScope.launch {
+            DataStoreManager.setSplitSize(getApplication(), size)
+        }
     }
 
-    fun setUseEncryptionByDefault(use: Boolean) {
-        _uiState.value = _uiState.value.copy(useEncryptionByDefault = use)
-    }
-
-    fun clearCache() {
-        // Implementation for clearing cache
-        // Could use WorkManager to clean cache directory
+    fun setPassword(pass: String?) {
+        _password.value = pass
+        viewModelScope.launch {
+            DataStoreManager.setPassword(getApplication(), pass)
+        }
     }
 }

@@ -79,7 +79,14 @@ dependencies {
     // Background Processing (WorkManager & Services)
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.lifecycle:lifecycle-service:2.8.0")
+
+    // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-core:1.1.1")
+
+    // Kotlin coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
     // Archive Libraries
     implementation("net.lingala.zip4j:zip4j:2.11.5")
