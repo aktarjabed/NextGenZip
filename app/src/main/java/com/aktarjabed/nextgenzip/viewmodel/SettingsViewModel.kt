@@ -4,49 +4,61 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.aktarjabed.nextgenzip.data.DataStoreManager
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _compressionLevel = MutableStateFlow(5)
-    val compressionLevel: StateFlow<Int> = _compressionLevel
-
-    private val _splitSize = MutableStateFlow(0L)
-    val splitSize: StateFlow<Long> = _splitSize
-
-    private val _password = MutableStateFlow<String?>(null)
-    val password: StateFlow<String?> = _password
-
-    init {
+    // Example function to save password securely
+    fun saveZipPassword(password: String, onResult: (success: Boolean, message: String?) -> Unit) {
         viewModelScope.launch {
-            val ctx = getApplication<Application>()
-            _compressionLevel.value = DataStoreManager.getCompressionLevel(ctx).first()
-            _splitSize.value = DataStoreManager.getSplitSize(ctx).first()
-            _password.value = DataStoreManager.getPassword(ctx).first()
+            try {
+                DataStoreManager.setPassword(getApplication(), password)
+                onResult(true, null)
+            } catch (e: Exception) {
+                // Log and surface user-friendly message
+                val msg = when (e) {
+                    is IOException -> "Failed to save password securely: ${e.message}"
+                    else -> "Unexpected error saving password"
+                }
+                onResult(false, msg)
+            }
         }
     }
 
-    fun setCompressionLevel(level: Int) {
-        _compressionLevel.value = level
+    // Example function to read password (only for UI purposes if needed)
+    fun loadSavedPassword(onLoaded: (password: String?) -> Unit) {
         viewModelScope.launch {
-            DataStoreManager.setCompressionLevel(getApplication(), level)
+            try {
+                val pwd = DataStoreManager.getPassword(getApplication())
+                onLoaded(pwd)
+            } catch (e: Exception) {
+                // If reading secure prefs fails, return null and log
+                onLoaded(null)
+            }
         }
     }
 
-    fun setSplitSize(size: Long) {
-        _splitSize.value = size
+    // Call at app startup or on settings screen open to migrate any legacy plaintext
+    fun ensureMigrationOfPlaintextPassword(onComplete: (success: Boolean, message: String?) -> Unit) {
         viewModelScope.launch {
-            DataStoreManager.setSplitSize(getApplication(), size)
+            try {
+                DataStoreManager.migratePlaintextPasswordIfAny(getApplication())
+                onComplete(true, null)
+            } catch (e: Exception) {
+                onComplete(false, "Migration failed: ${e.message}")
+            }
         }
     }
 
-    fun setPassword(pass: String?) {
-        _password.value = pass
+    fun clearStoredPassword(onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
-            DataStoreManager.setPassword(getApplication(), pass)
+            try {
+                DataStoreManager.clearPassword(getApplication())
+                onComplete(true)
+            } catch (_: Exception) {
+                onComplete(false)
+            }
         }
     }
 }
