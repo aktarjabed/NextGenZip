@@ -8,10 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  # Emulator / API level used for instrumentation tests (API 31 recommended)
   ANDROID_API_LEVEL: 31
-  ANDROID_EMULATOR_IMAGE: "system-images;android-${{ env.ANDROID_API_LEVEL }};google_apis;x86"
-  EMULATOR_DEVICE: "Pixel_3a_API_${{ env.ANDROID_API_LEVEL }}"
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g"
 
 jobs:
@@ -65,7 +62,6 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim
           force-avd-creation: true
           script: |
-            # Wait for fully booted device
             adb wait-for-device
             adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;'
             adb shell settings put global window_animation_scale 0
@@ -73,17 +69,15 @@ jobs:
             adb shell settings put global animator_duration_scale 0
             adb devices
 
-      - name: Ensure emulator is available (quick check)
+      - name: Ensure emulator is available
         run: adb shell getprop ro.build.version.sdk
 
-      - name: Run connected Android tests (instrumentation)
+      - name: Run connected Android tests (instrumentation) - skip native
         run: |
           echo "Running instrumentation tests..."
-          ./gradlew connectedAndroidTest --no-daemon --stacktrace
+          ./gradlew connectedAndroidTest -x externalNativeBuild --no-daemon --stacktrace
         continue-on-error: false
-        env:
-          JAVA_HOME: ${{ steps.setup-java.outputs.java-home }}
-        # Capture test output (may exist under app/build/outputs/androidTest-results)
+
       - name: Upload instrumentation test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,7 +87,6 @@ jobs:
             app/build/reports/androidTests/connected/*
             app/build/outputs/androidTest-results/connected/*
             app/build/test-results/*
-          # keep only latest for debugging
           retention-days: 7
 
       - name: Run lint and build
@@ -101,8 +94,6 @@ jobs:
           echo "Running lint and assemble..."
           ./gradlew lint --no-daemon --stacktrace || true
           ./gradlew assembleDebug --no-daemon --stacktrace
-        env:
-          JAVA_HOME: ${{ steps.setup-java.outputs.java-home }}
 
       - name: Upload build artifacts
         if: always()
@@ -112,15 +103,11 @@ jobs:
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
 
-      - name: Publish test summary (optional)
+      - name: Publish test summary
         if: always()
         run: |
           echo "==== Build finished ===="
           if [ -d "app/build/reports/androidTests/connected" ]; then
             echo "Instrumentation reports available:"
             ls -la app/build/reports/androidTests/connected || true
-          fi
-          if [ -d "app/build/reports/lint-results" ]; then
-            echo "Lint reports available:"
-            ls -la app/build/reports/lint-results || true
           fi

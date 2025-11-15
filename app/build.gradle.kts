@@ -3,7 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("kotlin-parcelize")
-    id("com.google.protobuf")
+    id("com.google.protobuf") version "0.9.4"
 }
 
 android {
@@ -67,15 +67,12 @@ android {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.3"
+        artifact = "com.google.protobuf:protoc:3.25.1"
     }
     generateProtoTasks {
         all().forEach { task ->
             task.builtins {
-                getByName("java") {
-                    option("lite")
-                }
-                getByName("kotlin") {
+                register("java") {
                     option("lite")
                 }
             }
@@ -110,7 +107,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.datastore:datastore-core:1.1.1")
     implementation("androidx.datastore:datastore-datastore:1.1.1")
-    implementation("com.google.protobuf:protobuf-javalite:3.25.3")
+    implementation("com.google.protobuf:protobuf-javalite:3.25.1")
     implementation("com.google.protobuf:protobuf-kotlin-lite:3.25.3")
 
 
@@ -123,9 +120,10 @@ dependencies {
 
     // Archive Libraries
     implementation("net.lingala.zip4j:zip4j:2.11.5")
-    implementation("org.apache.commons:commons-compress:1.26.2")
+    implementation("org.apache.commons:commons-compress:1.26.0")
+    implementation("com.github.junrar:junrar:7.5.5")
     implementation("commons-io:commons-io:2.16.1")
-    implementation("com.github.junrar:junrar:7.0.0")
+
 
     // AI Fallback
     implementation("org.tensorflow:tensorflow-lite-gpu:2.15.0")
