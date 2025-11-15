@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.aktarjabed.nextgenzip.ai.LlamaNativeBridge
 import com.aktarjabed.nextgenzip.ai.SafeLlamaManager
 import com.aktarjabed.nextgenzip.data.ArchiveEngine
 import kotlinx.coroutines.Dispatchers
@@ -71,30 +72,20 @@ class ArchiveViewModel : ViewModel() {
 
     fun analyzeWithAI(modelPath: String, prompt: String) {
         viewModelScope.launch {
-            SafeLlamaManager.respond(modelPath, prompt, maxTokens = 256).collect { result ->
-                result.onSuccess { responseText ->
-                    _uiState.update { it.copy(
-                        aiResponse = responseText,
-                        aiError = null
-                    )}
-                }
-                result.onFailure { error ->
-                    val userMessage = when (error) {
-                        is SafeLlamaManager.NativeLibraryUnavailableException ->
-                            "AI features require native components. Please install the full version."
-                        is SafeLlamaManager.ModelNotFoundException ->
-                            "Model file not found. Please download a compatible model."
-                        is SafeLlamaManager.ModelInitializationException ->
-                            "Failed to load AI model. The model may be corrupted."
-                        is SafeLlamaManager.InferenceException ->
-                            "AI processing failed: ${error.message}"
-                        else ->
-                            "Unexpected error: ${error.message}"
+            when (val res = SafeLlamaManager.safeInit(modelPath, 2048)) {
+                is SafeLlamaManager.InitResult.Success -> {
+                    val handle = res.handle
+                    try {
+                        val response = LlamaNativeBridge.nativeInfer(handle, prompt, 256)
+                        _uiState.update { it.copy(aiResponse = response, aiError = null) }
+                    } catch (e: Exception) {
+                        _uiState.update { it.copy(aiResponse = "", aiError = "AI inference failed: ${e.message}") }
+                    } finally {
+                        SafeLlamaManager.safeClose(handle)
                     }
-                    _uiState.update { it.copy(
-                        aiResponse = "",
-                        aiError = userMessage
-                    )}
+                }
+                is SafeLlamaManager.InitResult.Failure -> {
+                    _uiState.update { it.copy(aiResponse = "", aiError = res.reason) }
                 }
             }
         }
