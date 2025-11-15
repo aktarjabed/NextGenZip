@@ -128,6 +128,12 @@ dependencies {
     // AI Fallback
     implementation("org.tensorflow:tensorflow-lite-gpu:2.15.0")
 
+    // Malware Detection & VirusTotal
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.json:json:20231013")
+
+
     // Test
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
