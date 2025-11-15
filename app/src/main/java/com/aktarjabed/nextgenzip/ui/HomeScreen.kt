@@ -15,7 +15,8 @@ import androidx.compose.ui.unit.dp
 fun HomeScreen(
     onNavigateToArchive: () -> Unit,
     onNavigateToExtract: () -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToSecurity: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -120,6 +121,38 @@ fun HomeScreen(
                         )
                         Text(
                             text = "Unpack ZIP, 7Z, RAR, TAR files",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+
+            // Security Dashboard Card
+            ElevatedCard(
+                onClick = onNavigateToSecurity,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                    Column {
+                        Text(
+                            text = "Security & Malware Detection",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Scan files for threats and manage quarantine",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )

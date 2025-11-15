@@ -13,6 +13,8 @@ sealed class Screen(val route: String) {
     object Settings : Screen("settings")
     object History : Screen("history")
     object Favorites : Screen("favorites")
+    object Security : Screen("security_dashboard")
+    object SecuritySettings : Screen("security_settings")
 }
 
 @Composable
@@ -25,7 +27,8 @@ fun NavGraph(navController: NavHostController) {
             HomeScreen(
                 onNavigateToArchive = { navController.navigate(Screen.Archive.route) },
                 onNavigateToExtract = { navController.navigate(Screen.Extract.route) },
-                onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToSecurity = { navController.navigate(Screen.Security.route) }
             )
         }
         composable(Screen.Archive.route) {
@@ -42,6 +45,16 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Screen.Favorites.route) {
             FavoritesScreen()
+        }
+        composable(Screen.Security.route) {
+            com.aktarjabed.nextgenzip.ui.screens.MalwareDetectionScreen(
+                onSettingsClick = { navController.navigate(Screen.SecuritySettings.route) }
+            )
+        }
+        composable(Screen.SecuritySettings.route) {
+            com.aktarjabed.nextgenzip.ui.screens.SecuritySettingsScreen(
+                onClose = { navController.popBackStack() }
+            )
         }
     }
 }
