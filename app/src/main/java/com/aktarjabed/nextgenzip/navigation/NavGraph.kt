@@ -15,6 +15,8 @@ sealed class Screen(val route: String) {
     object Favorites : Screen("favorites")
     object Security : Screen("security_dashboard")
     object SecuritySettings : Screen("security_settings")
+    object CloudUsage : Screen("cloud_usage")
+    object Troubleshooting : Screen("troubleshooting")
 }
 
 @Composable
@@ -38,7 +40,11 @@ fun NavGraph(navController: NavHostController) {
             ExtractScreen(onNavigateBack = { navController.popBackStack() })
         }
         composable(Screen.Settings.route) {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            com.aktarjabed.nextgenzip.ui.screens.AdvancedSettingsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenUsage = { navController.navigate(Screen.CloudUsage.route) },
+                onOpenTroubleshoot = { navController.navigate(Screen.Troubleshooting.route) }
+            )
         }
         composable(Screen.History.route) {
             HistoryScreen()
@@ -54,6 +60,16 @@ fun NavGraph(navController: NavHostController) {
         composable(Screen.SecuritySettings.route) {
             com.aktarjabed.nextgenzip.ui.screens.SecuritySettingsScreen(
                 onClose = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.CloudUsage.route) {
+            com.aktarjabed.nextgenzip.ui.screens.CloudUsageDashboard(
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.Troubleshooting.route) {
+            com.aktarjabed.nextgenzip.ui.screens.TroubleshootingScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }
