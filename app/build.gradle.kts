@@ -118,6 +118,9 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
+    // Security
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // Archive Libraries
     implementation("net.lingala.zip4j:zip4j:2.11.5")
     implementation("org.apache.commons:commons-compress:1.26.2")
