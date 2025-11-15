@@ -4,11 +4,12 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.aktarjabed.nextgenzip.ai.LlamaAIManager
+import com.aktarjabed.nextgenzip.ai.SafeLlamaManager
 import com.aktarjabed.nextgenzip.data.ArchiveEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class ArchiveUiState(
     val selectedFiles: List<Uri> = emptyList(),
@@ -19,7 +20,8 @@ data class ArchiveUiState(
     val statusMessage: String = "",
     val resultMessage: String? = null,
     val isSuccess: Boolean = false,
-    val aiResponse: String = ""
+    val aiResponse: String = "",
+    val aiError: String? = null
 )
 
 class ArchiveViewModel : ViewModel() {
@@ -50,13 +52,15 @@ class ArchiveViewModel : ViewModel() {
 
                 val outPath = "${context.cacheDir.absolutePath}/archive_${System.currentTimeMillis()}.zip"
 
-                ArchiveEngine.createZipWithSplitAndAes(
+                ArchiveEngine.createZipWithSplitAndAesSuspend(
                     context,
                     _uiState.value.selectedFiles,
-                    outPath,
+                    File(outPath),
                     _uiState.value.password,
                     _uiState.value.splitSizeBytes
-                )
+                ) { progress ->
+                    _uiState.update { it.copy(progress = progress) }
+                }
 
                 _uiState.value = _uiState.value.copy(isProcessing = false, progress = 1f, resultMessage = "Archive created at:\n$outPath", isSuccess = true, selectedFiles = emptyList())
             } catch (e: Exception) {
@@ -65,16 +69,38 @@ class ArchiveViewModel : ViewModel() {
         }
     }
 
-    fun analyzeWithAI(modelPath: String?, prompt: String, maxTokens: Int = 128) {
-        viewModelScope.launch(Dispatchers.IO) {
-            LlamaAIManager.respond(modelPath ?: "", prompt, maxTokens)
-                .collect { chunk ->
-                    _uiState.update { it.copy(aiResponse = it.aiResponse + chunk) }
+    fun analyzeWithAI(modelPath: String, prompt: String) {
+        viewModelScope.launch {
+            SafeLlamaManager.respond(modelPath, prompt, maxTokens = 256).collect { result ->
+                result.onSuccess { responseText ->
+                    _uiState.update { it.copy(
+                        aiResponse = responseText,
+                        aiError = null
+                    )}
                 }
+                result.onFailure { error ->
+                    val userMessage = when (error) {
+                        is SafeLlamaManager.NativeLibraryUnavailableException ->
+                            "AI features require native components. Please install the full version."
+                        is SafeLlamaManager.ModelNotFoundException ->
+                            "Model file not found. Please download a compatible model."
+                        is SafeLlamaManager.ModelInitializationException ->
+                            "Failed to load AI model. The model may be corrupted."
+                        is SafeLlamaManager.InferenceException ->
+                            "AI processing failed: ${error.message}"
+                        else ->
+                            "Unexpected error: ${error.message}"
+                    }
+                    _uiState.update { it.copy(
+                        aiResponse = "",
+                        aiError = userMessage
+                    )}
+                }
+            }
         }
     }
 
     fun clearResult() {
-        _uiState.value = _uiState.value.copy(resultMessage = null, isSuccess = false, aiResponse = "")
+        _uiState.value = _uiState.value.copy(resultMessage = null, isSuccess = false, aiResponse = "", aiError = null)
     }
 }

@@ -23,14 +23,15 @@ import java.io.*
 object ArchiveEngine {
 
     // This is the primary method the ViewModel will call for ZIP creation.
-    fun createZipWithSplitAndAes(
+    suspend fun createZipWithSplitAndAesSuspend(
         context: Context,
-        uris: List<Uri>,
-        outZipPath: String,
+        inputUris: List<Uri>,
+        outZipFile: File,
         password: String?,
-        splitSizeInBytes: Long
+        splitSizeInBytes: Long,
+        progressCallback: (Float) -> Unit
     ) {
-        val zipFile = ZipFile(outZipPath)
+        val zipFile = ZipFile(outZipFile)
         val tempFiles = mutableListOf<File>()
 
         try {
